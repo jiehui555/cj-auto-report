@@ -1,4 +1,10 @@
-REPORTS = [
+import os
+
+base_url = os.getenv("BASE_URL", "unknown")
+bot_username = os.getenv("BOT_USERNAME", "unknown")
+bot_password = os.getenv("BOT_PASSWORD", "unknown")
+
+reports = [
     {
         "name": "今日新单报表",
         "page": 208,
