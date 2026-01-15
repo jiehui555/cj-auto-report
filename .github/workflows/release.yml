@@ -30,8 +30,8 @@ jobs:
       with:
         push: true
         tags: |
-          ghcr.io/${{ github.repository_owner }}/cj-auto-report:${{ steps.vars.outputs.VERSION }}
-          ghcr.io/${{ github.repository_owner }}/cj-auto-report:latest
+          ghcr.io/${{ github.repository_owner }}/cj-cronjob:${{ steps.vars.outputs.VERSION }}
+          ghcr.io/${{ github.repository_owner }}/cj-cronjob:latest
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
