@@ -1,8 +1,3 @@
-"""PLUS系统数据服务"""
-
-from datetime import datetime
-from typing import Optional
-
 from src.tools.clock import now
 from src.tools.mysql import get_plus_db
 from src.tools.logger import get_logger
@@ -71,24 +66,22 @@ class PlusService:
     ) -> int:
         """插入仓库已导入的条码"""
         sql = """
-        INSERT INTO `物料扫码-SN库` (`销售订单`, `物料编码`, `SN码`, `导入来源`, `录入人`, `录入时间`) 
+        INSERT INTO `物料扫码-SN库` (`销售订单`, `物料编码`, `SN码`, `导入来源`, `录入人`, `录入时间`)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        insert_count = 0
         datetime_now = now().strftime("%Y-%m-%d %H:%M:%S")
-        for barcode in barcodes:
-            insert_count += self.db.execute_update(
-                sql,
-                (
-                    order_code,
-                    inv_code,
-                    barcode["code"],
-                    "机器人",
-                    "机器人",
-                    datetime_now,
-                ),
+        params_list = [
+            (
+                order_code,
+                inv_code,
+                barcode["code"],
+                "机器人",
+                "机器人",
+                datetime_now,
             )
-        return insert_count
+            for barcode in barcodes
+        ]
+        return self.db.execute_batch_update(sql, params_list)
 
 
 # 工厂函数

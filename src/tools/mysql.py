@@ -57,6 +57,40 @@ class MySQLConnection:
                 conn.close()
                 logger.debug(f"已关闭数据库连接: {self.database}")
 
+    @contextlib.contextmanager
+    def transaction(
+        self,
+    ) -> Generator[pymysql.Connection[pymysql.cursors.DictCursor], None, None]:
+        """获取事务连接的上下文管理器（自动提交关闭）"""
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                database=self.database,
+                charset=self.charset,
+                cursorclass=pymysql.cursors.DictCursor,
+                autocommit=False,
+            )
+            logger.debug(
+                f"已连接到数据库(事务模式): {self.database}@{self.host}:{self.port}"
+            )
+            yield conn
+            conn.commit()
+            logger.debug(f"事务已提交: {self.database}")
+        except Exception as e:
+            if conn:
+                conn.rollback()
+                logger.warning(f"事务已回滚: {self.database} - {e}")
+            logger.error(f"事务执行失败: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
+                logger.debug(f"已关闭数据库连接: {self.database}")
+
     def get_version(self) -> str:
         """获取数据库版本"""
         sql = "SELECT @@VERSION AS version;"
@@ -80,6 +114,16 @@ class MySQLConnection:
             with conn.cursor() as cursor:
                 affected_rows = cursor.execute(sql, params or ())
                 return affected_rows
+
+    def execute_batch_update(self, sql: str, params_list: List[tuple]) -> int:
+        """在事务中批量执行更新/插入/删除操作，返回总影响行数"""
+        total_affected = 0
+        with self.transaction() as conn:
+            with conn.cursor() as cursor:
+                for params in params_list:
+                    affected_rows = cursor.execute(sql, params)
+                    total_affected += affected_rows
+        return total_affected
 
 
 # PLUS数据库连接实例
