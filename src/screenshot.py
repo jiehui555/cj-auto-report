@@ -1,10 +1,10 @@
 import logging
 import os
 
-from PIL import Image
 from playwright import sync_api
 
 from src import now
+from src.utils.image import merge_images
 
 
 def handle_today_new_order_report(page: sync_api.Page, url: str) -> str:
@@ -113,39 +113,6 @@ def append_blank_month_tbody(locator: sync_api.Locator, thead_month: str | int):
         """, arg=tbody)
 
 
-def merge_images(img_paths: list[str], report: str) -> str:
-    """ 合并多张局部截图 """
-
-    # 打开所有图片
-    images = [Image.open(img_path) for img_path in img_paths]
-
-    # 收集每张图像的尺寸
-    widths = [img.size[0] for img in images]
-    heights = [img.size[1] for img in images]
-
-    # 计算最终图片的宽度（取所有图片的最大宽度）和总高度
-    max_width = max(widths)
-    total_height = sum(heights)
-
-    # 创建一张新的空白大图
-    new_img = Image.new('RGB', (max_width, total_height),
-                        (255, 255, 255))  # 白色背景
-
-    # 一张一张贴上去
-    y_offset = 0
-    for img in images:
-        # 水平居中（可选，如果你想左对齐就把 max_width 改成 img.width）
-        x_offset = (max_width - img.width) // 2
-        new_img.paste(img, (x_offset, y_offset))
-        y_offset += img.height
-
-    # 保存
-    save_path = f"{report}_{now().strftime('%Y-%m-%d')}.png"
-    new_img.save(save_path, quality=95)
-
-    return save_path
-
-
 def handle_shipment_report(page: sync_api.Page, url: str, report: str, has_tail: bool) -> str:
     """ 截取「出货报表」 """
 
@@ -226,8 +193,9 @@ def handle_shipment_report(page: sync_api.Page, url: str, report: str, has_tail:
     logging.info(f"需要合并的图片：{img_paths}")
 
     # 合并图片
-    full_img_path = merge_images(img_paths, report)
-    logging.info(f"图片合并完成，保存路径: {img_path}")
+    save_name = f"{report}_{now().strftime('%Y-%m-%d')}"
+    full_img_path = merge_images(img_paths, save_name)
+    logging.info(f"图片合并完成，保存路径: {full_img_path}")
 
     # 删除「局部截图」的图片
     for img_path in img_paths:

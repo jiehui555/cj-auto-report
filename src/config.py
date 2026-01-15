@@ -19,11 +19,11 @@ reports = [
         "name": "延期出货明细表",
         "page": 220,
     },
-    # {
-    #     "name": "宏智出货报表",
-    #     "page": 210,
-    #     "has_tail": False,
-    # },
+    {
+        "name": "宏智出货报表",
+        "page": 210,
+        "has_tail": False,
+    },
     # {
     #     "name": "技果出货报表",
     #     "page": 207,
