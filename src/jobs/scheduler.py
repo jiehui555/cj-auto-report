@@ -1,21 +1,14 @@
-#!/usr/bin/env python3
-"""
-Job Scheduler - Runs scheduled jobs
-Supports multiple jobs with different schedules
-"""
 import logging
 import time
 import schedule
-from datetime import datetime
 from typing import List, Callable, Tuple
 
 from src import now
-from src.cron.screenshot_job import run_screenshot_job
 
 
 def execute_job(job_name: str, job_func: Callable[[], int]):
     """执行任务并记录日志"""
-    current_time = now().strftime('%Y-%m-%d %H:%M:%S')
+    current_time = now().strftime("%Y-%m-%d %H:%M:%S")
     logging.info(f"{'='*50}")
     logging.info(f"开始任务: {job_name} - {current_time}")
     logging.info(f"{'='*50}")
@@ -33,8 +26,7 @@ def execute_job(job_name: str, job_func: Callable[[], int]):
 
 
 def run_scheduler(
-    jobs: List[Tuple[str, str, Callable[[], int]]],
-    run_once_at_start: bool = True
+    jobs: List[Tuple[str, str, Callable[[], int]]], run_once_at_start: bool = True
 ):
     """
     主调度器 - 支持多个任务
@@ -44,10 +36,10 @@ def run_scheduler(
               执行时间格式: "HH:MM" (24小时制), None表示不调度
         run_once_at_start: 是否在启动时立即运行一次所有任务
     """
-    logging.info("="*60)
+    logging.info("=" * 60)
     logging.info("每日任务调度器已启动")
     logging.info(f"当前时间: {now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logging.info("="*60)
+    logging.info("=" * 60)
 
     # 注册任务
     for job_name, schedule_time, job_func in jobs:
@@ -68,16 +60,3 @@ def run_scheduler(
     while True:
         schedule.run_pending()
         time.sleep(60)  # 每分钟检查一次
-
-
-def main():
-    """默认入口 - 运行截图任务调度器"""
-    # 默认: 截图任务每天 08:00 执行
-    jobs = [
-        ("截图任务", "08:00", run_screenshot_job),
-    ]
-    run_scheduler(jobs, run_once_at_start=True)
-
-
-if __name__ == "__main__":
-    main()

@@ -2,7 +2,9 @@ from typing import List
 from PIL import Image
 
 
-def merge_images(img_paths: List[str], output_name: str, background: tuple = (255, 255, 255)) -> str:
+def merge_images(
+    img_paths: List[str], output_name: str, background: tuple = (255, 255, 255)
+) -> str:
     """
     Merge multiple images vertically (stack them on top of each other)
 
@@ -26,7 +28,7 @@ def merge_images(img_paths: List[str], output_name: str, background: tuple = (25
     total_height = sum(heights)
 
     # Create new blank image
-    new_img = Image.new('RGB', (max_width, total_height), background)
+    new_img = Image.new("RGB", (max_width, total_height), background)
 
     # Paste images one by one with centering
     y_offset = 0

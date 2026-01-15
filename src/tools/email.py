@@ -32,16 +32,16 @@ def send_email(
         is_html: Whether body is HTML
     """
     message = MIMEMultipart()
-    message['Subject'] = subject
-    message['From'] = smtp_from
-    message['To'] = to
+    message["Subject"] = subject
+    message["From"] = smtp_from
+    message["To"] = to
 
-    message.attach(MIMEText(body, 'html' if is_html else 'plain'))
+    message.attach(MIMEText(body, "html" if is_html else "plain"))
 
     if attachments:
         for attachment_path in attachments:
             if os.path.exists(attachment_path):
-                with open(attachment_path, 'rb') as file:
+                with open(attachment_path, "rb") as file:
                     filename = os.path.basename(attachment_path)
                     message.attach(MIMEApplication(file.read(), Name=filename))
 

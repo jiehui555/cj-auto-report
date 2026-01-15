@@ -12,4 +12,4 @@ ENV PATH="/venv/bin:$PATH"
 RUN playwright install --with-deps chromium \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 COPY . .
-CMD ["python", "main.py"]
+CMD ["python", "main.py", "--schedule"]
