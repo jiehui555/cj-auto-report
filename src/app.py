@@ -1,13 +1,13 @@
 import argparse
 import sys
-from src.jobs.it_screenshot_job import run_screenshot_job
+from src.jobs.it_screenshot_job import run_it_screenshot_job
 from src.jobs.scheduler import run_scheduler
 
 
-def run(job_name: str = "screenshot") -> int:
+def run(job_name: str = "it-screenshot") -> int:
     """运行指定任务"""
     jobs = {
-        "screenshot": run_screenshot_job,
+        "it-screenshot": run_it_screenshot_job,
     }
 
     if job_name not in jobs:
@@ -21,7 +21,7 @@ def run(job_name: str = "screenshot") -> int:
 def run_schedule():
     """运行定时调度器"""
     jobs = [
-        ("截图任务", "08:00", run_screenshot_job),
+        ("截图任务", "08:00", run_it_screenshot_job),
     ]
     run_scheduler(jobs, run_once_at_start=True)
 
@@ -33,11 +33,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 可用命令:
-  --run [任务名]    立即运行指定任务 (默认: screenshot)
+  --run [任务名]    立即运行指定任务 (默认: it-screenshot)
   --schedule        启动定时调度器 (每天 08:00 执行)
 
 示例:
-  python main.py --run screenshot
+  python main.py --run it-screenshot
   python main.py --schedule
         """,
     )
@@ -45,8 +45,8 @@ def main():
     parser.add_argument(
         "--run",
         type=str,
-        default="screenshot",
-        help="指定要运行的任务名称 (默认: screenshot)",
+        default="it-screenshot",
+        help="指定要运行的任务名称 (默认: it-screenshot)",
     )
     parser.add_argument("--schedule", action="store_true", help="启动定时调度器")
 
