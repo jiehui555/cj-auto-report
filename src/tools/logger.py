@@ -2,6 +2,7 @@ import logging
 import os
 from typing import Optional
 
+from src import config
 from src.tools import now
 
 
@@ -32,7 +33,7 @@ def new_logger(
     # ------------------------------
     if log_dir is None:
         log_date = now().strftime("%Y-%m-%d")
-        log_dir = f"tmp/logs/{log_date}"
+        log_dir = f"{config.LOG_DIR}/{log_date}"
 
     os.makedirs(log_dir, exist_ok=True)
 

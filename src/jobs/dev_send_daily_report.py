@@ -13,7 +13,7 @@ from src.tools.logger import new_logger
 logger = new_logger(__name__, level=config.LOG_LEVEL, show_console=config.IS_DEV)
 
 # 临时文件目录
-TEMP_DIR = "tmp/output/it-screenshot"
+TEMP_DIR = f"{config.OUTPUT_DIR}/daily-report-screenshot"
 
 
 def run_send_daily_report_job() -> None:

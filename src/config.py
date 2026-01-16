@@ -1,9 +1,17 @@
 import logging
 import os
+from pathlib import Path
 
 # 运行环境
 RUN_ENV = os.getenv("RUN_ENV", "dev")
 IS_DEV = RUN_ENV == "dev"
+
+# 项目根目录
+ROOT_DIR = Path(__file__).parent.parent.absolute()
+LOG_DIR = os.path.join(ROOT_DIR, "tmp", "logs")
+OUTPUT_DIR = os.path.join(ROOT_DIR, "tmp", "output")
+
+# 日志级别
 LOG_LEVEL = {
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
