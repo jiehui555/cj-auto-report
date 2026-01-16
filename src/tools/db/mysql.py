@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 from typing import Generator, Optional, List, Dict, Any
 
 import pymysql
@@ -8,7 +9,7 @@ import pymysql
 from src import config
 from src.tools.logger import new_logger
 
-logger = new_logger(__name__)
+logger = new_logger(__name__, level=logging.WARN)
 
 
 class MySQLConnection:

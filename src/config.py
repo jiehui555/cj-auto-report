@@ -1,4 +1,16 @@
+import logging
 import os
+
+# 运行环境
+RUN_ENV = os.getenv("RUN_ENV", "dev")
+IS_DEV = RUN_ENV == "dev"
+LOG_LEVEL = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARN": logging.WARNING,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+}.get(os.getenv("LOG_LEVEL", "INFO"), logging.INFO)
 
 # PLUS 系统配置
 CJPLUS_URL = os.getenv("CJPLUS_URL", "unknown")

@@ -1,12 +1,13 @@
 import datetime
 import re
+from src import config
 from src.services.mes_service import get_mes_service
 from src.services.plus_service import get_plus_service
 from src.tools import now
 from src.tools.logger import new_logger
 
 
-logger = new_logger(__name__)
+logger = new_logger(__name__, show_console=config.IS_DEV)
 
 
 def run_plm2erp_sync_reimport_sn_job() -> None:

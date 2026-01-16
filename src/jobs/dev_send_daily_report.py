@@ -10,7 +10,7 @@ from src.tools import now
 from src.tools.email import send_email
 from src.tools.logger import new_logger
 
-logger = new_logger(__name__)
+logger = new_logger(__name__, level=config.LOG_LEVEL, show_console=config.IS_DEV)
 
 # 临时文件目录
 TEMP_DIR = "tmp/output/it-screenshot"
