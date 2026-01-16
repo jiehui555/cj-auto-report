@@ -2,14 +2,15 @@ import datetime
 import re
 from src.services.mes_service import get_mes_service
 from src.services.plus_service import get_plus_service
-from src.tools.clock import now
-from src.tools.logger import get_logger
-
-logger = get_logger(__name__)
+from src.tools import now
+from src.tools.logger import new_logger
 
 
-def run_mes2plus_reimport_sn_job() -> int:
-    """MES2Plus-重新导入序列号"""
+logger = new_logger(__name__)
+
+
+def run_plm2erp_sync_reimport_sn_job() -> None:
+    """PLM2ERP-同步重新导入的序列号"""
 
     # 连接数据库
     mes_service = get_mes_service()
@@ -28,7 +29,7 @@ def run_mes2plus_reimport_sn_job() -> int:
 
     # 遍历近期更新的条码生成记录
     for record in barcode_creation_records:
-        order_code = _extract_order_number(record["order_code"])
+        order_code = __extract_order_number(record["order_code"])
         logger.info(f"正在处理条码生成记录: {record['task_code']} - {order_code}")
 
         # 查询导入的条码列表
@@ -68,10 +69,8 @@ def run_mes2plus_reimport_sn_job() -> int:
         )
         logger.info(f"将 MES 导入的条码列表导入 PLUS: {insert_count} 条")
 
-    return 0
 
-
-def _extract_order_number(order: str) -> str:
+def __extract_order_number(order: str) -> str:
     """从输入字符串中提取正确的订单号"""
 
     # 第一优先级：匹配带有 -数字-数字 后缀的订单号，只取主体部分

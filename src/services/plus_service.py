@@ -1,8 +1,8 @@
-from src.tools.clock import now
+from src.tools import now
 from src.tools.db.mysql import get_plus_db
-from src.tools.logger import get_logger
+from src.tools.logger import new_logger
 
-logger = get_logger(__name__)
+logger = new_logger(__name__)
 
 
 class PlusService:

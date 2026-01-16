@@ -6,9 +6,9 @@ from typing import Generator, Optional, List, Dict, Any
 import pymysql
 
 from src import config
-from src.tools.logger import get_logger
+from src.tools.logger import new_logger
 
-logger = get_logger(__name__)
+logger = new_logger(__name__)
 
 
 class MySQLConnection:

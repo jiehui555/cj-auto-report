@@ -1,6 +1,7 @@
-from .clock import now
-from .email import send_email, send_report_email
-from .image import merge_images
-from .logger import get_logger
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
-__all__ = ["now", "send_email", "send_report_email", "merge_images", "get_logger"]
+
+def now():
+    """获取当前时间"""
+    return datetime.now(ZoneInfo("Asia/Shanghai"))

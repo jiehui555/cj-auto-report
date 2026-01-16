@@ -1,20 +1,94 @@
 import os
 import shutil
+from typing import List, Optional
 import zipfile
 from playwright import sync_api
+from PIL import Image
 
-from src import config, now
-from src.tools.email import send_report_email
-from src.tools.image import merge_images
-from src.tools.logger import get_logger
+from src import config
+from src.tools import now
+from src.tools.email import send_email
+from src.tools.logger import new_logger
 
-logger = get_logger(__name__)
+logger = new_logger(__name__)
 
 # 临时文件目录
 TEMP_DIR = "tmp/output/it-screenshot"
 
 
-def handle_today_new_order_report(page: sync_api.Page, url: str) -> str:
+def run_send_daily_report_job() -> None:
+    """发送每日截图报告"""
+    img_paths = []
+
+    # 删除并重新创建临时目录
+    if os.path.exists(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR)
+    os.makedirs(TEMP_DIR, exist_ok=True)
+    logger.info(f"已清理并创建临时目录: {TEMP_DIR}")
+
+    with sync_api.sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        logger.info("已启动浏览器")
+
+        viewport = sync_api.ViewportSize(width=1920, height=1080)
+        context = browser.new_context(viewport=viewport)
+        logger.info("已创建上下文")
+
+        page = context.new_page()
+        logger.info("已创建新页面")
+
+        # 登录
+        page.goto(config.CJPLUS_URL, wait_until="networkidle", timeout=30_000)
+        page.wait_for_selector('input[name="user"]', timeout=5_000)
+        logger.info("已加载登录页面")
+
+        page.fill('input[name="user"]', config.CJPLUS_USERNAME)
+        page.fill('input[name="pass"]', config.CJPLUS_PASSWORD)
+        page.click('input[type="submit"]')
+        page.wait_for_load_state("networkidle", timeout=30_000)
+        logger.info("已成功登录后台")
+
+        # 处理每个报表
+        for report in config.SCREENSHOT_REPORTS:
+            url = f'{config.CJPLUS_URL}/utl/{report["page"]}/{report["page"]}.php'
+            logger.info(f'开始处理报表：{report["name"]} - {url}')
+
+            if report["name"] == "今日新单报表":
+                img_path = __handle_today_new_order_report(page, url)
+            elif report["name"] == "延期出货明细表":
+                img_path = __handle_delay_shipment_report(page, url)
+            else:
+                img_path = __handle_shipment_report(
+                    page, url, report["name"], report.get("has_tail", False)
+                )
+
+            img_paths.append(img_path)
+            logger.info(f"已完成截图：{img_path}")
+
+    # 打包图片
+    zip_path = os.path.join(TEMP_DIR, f"每日截图-打包-{now().strftime('%Y-%m-%d')}.zip")
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
+        for result_img_path in img_paths:
+            if os.path.exists(result_img_path):
+                filename = os.path.basename(result_img_path)
+                zipf.write(result_img_path, arcname=filename)
+            else:
+                logger.warning(f"文件不存在，跳过 {result_img_path}")
+    logger.info(f"已打包图片：{zip_path}")
+
+    # 发送邮件
+    __send_report_email(
+        smtp_host=config.EMAIL_SMTP_HOST,
+        smtp_port=config.EMAIL_SMTP_PORT,
+        smtp_from=config.EMAIL_SMTP_FROM,
+        smtp_pass=config.EMAIL_SMTP_PASS,
+        to=config.EMAIL_SMTP_TO,
+        zip_path=zip_path,
+    )
+    logger.info("已发送邮件")
+
+
+def __handle_today_new_order_report(page: sync_api.Page, url: str) -> str:
     """截取「今日新单报表」"""
     page.goto(url, wait_until="networkidle", timeout=60_000)
     page.wait_for_selector("#table", state="visible", timeout=5_000)
@@ -27,7 +101,7 @@ def handle_today_new_order_report(page: sync_api.Page, url: str) -> str:
     return img_path
 
 
-def handle_delay_shipment_report(page: sync_api.Page, url: str) -> str:
+def __handle_delay_shipment_report(page: sync_api.Page, url: str) -> str:
     """截取「延期出货明细表」"""
     page.goto(url, wait_until="networkidle", timeout=30_000)
     page.wait_for_selector("#table", state="visible", timeout=5_000)
@@ -45,7 +119,7 @@ def handle_delay_shipment_report(page: sync_api.Page, url: str) -> str:
     return img_path
 
 
-def append_blank_month_tbody(locator: sync_api.Locator, thead_month: str | int):
+def __append_blank_month_tbody(locator: sync_api.Locator, thead_month: str | int):
     """添加空白的月份数据"""
     tbody = f"""
             <tbody data-type="{thead_month} 月">
@@ -77,7 +151,7 @@ def append_blank_month_tbody(locator: sync_api.Locator, thead_month: str | int):
     )
 
 
-def handle_shipment_report(
+def __handle_shipment_report(
     page: sync_api.Page, url: str, report: str, has_tail: bool
 ) -> str:
     """截取「出货报表」"""
@@ -111,7 +185,7 @@ def handle_shipment_report(
     for i in range(now().month, min(now().month + 3, 13)):
         css_locator = f'tbody[data-type="{i} 月"]'
         if page.locator(css_locator).count() == 0:
-            append_blank_month_tbody(page.locator("table"), i)
+            __append_blank_month_tbody(page.locator("table"), i)
             logger.info(f"添加空白的 {i} 月数据")
         img_path = os.path.join(TEMP_DIR, f"{report}_局部截图-{i} 月.png")
         page.locator(css_locator).screenshot(path=img_path)
@@ -131,7 +205,7 @@ def handle_shipment_report(
         for i in range(1, 3):
             css_locator = f'tbody[data-type="{i} 月"]'
             if page.locator(css_locator).count() == 0:
-                append_blank_month_tbody(page.locator("table"), i)
+                __append_blank_month_tbody(page.locator("table"), i)
                 logger.info(f"添加空白的 {i} 月数据")
             img_path = os.path.join(TEMP_DIR, f"{report}_局部截图-{i} 月.png")
             page.locator(css_locator).screenshot(path=img_path)
@@ -170,75 +244,99 @@ def handle_shipment_report(
     return full_img_path
 
 
-def run_it_screenshot_job() -> int:
-    """执行完整的截图任务"""
-    img_paths = []
+def __send_report_email(
+    smtp_host: str,
+    smtp_port: int,
+    smtp_from: str,
+    smtp_pass: str,
+    to: str,
+    zip_path: str,
+    subject: Optional[str] = None,
+    body: Optional[str] = None,
+) -> None:
+    """
+    Send report email with zip attachment
 
-    # 删除并重新创建临时目录
-    if os.path.exists(TEMP_DIR):
-        shutil.rmtree(TEMP_DIR)
-    os.makedirs(TEMP_DIR, exist_ok=True)
-    logger.info(f"已清理并创建临时目录: {TEMP_DIR}")
+    Args:
+        smtp_host: SMTP server host
+        smtp_port: SMTP server port
+        smtp_from: Sender email address
+        smtp_pass: Sender email password
+        to: Recipient email address
+        zip_path: Path to zip file
+        subject: Email subject (auto-generated if None)
+        body: Email body (auto-generated if None)
+    """
+    from datetime import datetime
 
-    with sync_api.sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
-        logger.info("已启动浏览器")
+    if subject is None:
+        subject = f"每日截图 - {datetime.now().strftime('%Y-%m-%d')}"
 
-        viewport = sync_api.ViewportSize(width=1920, height=1080)
-        context = browser.new_context(viewport=viewport)
-        logger.info("已创建上下文")
+    if body is None:
+        body = f"""
+        <p>附件是今天的所有报表截图打包（{datetime.now().strftime('%Y-%m-%d')}）</p>
+        <p>如有问题请检查运行状态</p>
+        """
 
-        page = context.new_page()
-        logger.info("已创建新页面")
-
-        # 登录
-        page.goto(config.CJPLUS_URL, wait_until="networkidle", timeout=30_000)
-        page.wait_for_selector('input[name="user"]', timeout=5_000)
-        logger.info("已加载登录页面")
-
-        page.fill('input[name="user"]', config.CJPLUS_USERNAME)
-        page.fill('input[name="pass"]', config.CJPLUS_PASSWORD)
-        page.click('input[type="submit"]')
-        page.wait_for_load_state("networkidle", timeout=30_000)
-        logger.info("已成功登录后台")
-
-        # 处理每个报表
-        for report in config.SCREENSHOT_REPORTS:
-            url = f'{config.CJPLUS_URL}/utl/{report["page"]}/{report["page"]}.php'
-            logger.info(f'开始处理报表：{report["name"]} - {url}')
-
-            if report["name"] == "今日新单报表":
-                img_path = handle_today_new_order_report(page, url)
-            elif report["name"] == "延期出货明细表":
-                img_path = handle_delay_shipment_report(page, url)
-            else:
-                img_path = handle_shipment_report(
-                    page, url, report["name"], report.get("has_tail", False)
-                )
-
-            img_paths.append(img_path)
-            logger.info(f"已完成截图：{img_path}")
-
-    # 打包图片
-    zip_path = os.path.join(TEMP_DIR, f"每日截图-打包-{now().strftime('%Y-%m-%d')}.zip")
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
-        for result_img_path in img_paths:
-            if os.path.exists(result_img_path):
-                filename = os.path.basename(result_img_path)
-                zipf.write(result_img_path, arcname=filename)
-            else:
-                logger.warning(f"文件不存在，跳过 {result_img_path}")
-    logger.info(f"已打包图片：{zip_path}")
-
-    # 发送邮件
-    send_report_email(
-        smtp_host=config.EMAIL_SMTP_HOST,
-        smtp_port=config.EMAIL_SMTP_PORT,
-        smtp_from=config.EMAIL_SMTP_FROM,
-        smtp_pass=config.EMAIL_SMTP_PASS,
-        to=config.EMAIL_SMTP_TO,
-        zip_path=zip_path,
+    send_email(
+        smtp_host=smtp_host,
+        smtp_port=smtp_port,
+        smtp_from=smtp_from,
+        smtp_pass=smtp_pass,
+        to=to,
+        subject=subject,
+        body=body,
+        attachments=[zip_path] if zip_path else None,
+        is_html=True,
     )
-    logger.info("已发送邮件")
 
-    return 0
+
+def merge_images(
+    img_paths: List[str],
+    output_name: str,
+    background: tuple = (255, 255, 255),
+    output_dir: Optional[str] = None,
+) -> str:
+    """
+    Merge multiple images vertically (stack them on top of each other)
+
+    Args:
+        img_paths: List of image file paths to merge
+        output_name: Name for the output file (without extension)
+        background: Background color as RGB tuple, defaults to white
+        output_dir: Directory to save the output file, defaults to current directory
+
+    Returns:
+        Path to the merged image file
+    """
+    # Open all images
+    images = [Image.open(img_path) for img_path in img_paths]
+
+    # Get dimensions
+    widths = [img.size[0] for img in images]
+    heights = [img.size[1] for img in images]
+
+    # Calculate final dimensions
+    max_width = max(widths)
+    total_height = sum(heights)
+
+    # Create new blank image
+    new_img = Image.new("RGB", (max_width, total_height), background)
+
+    # Paste images one by one with centering
+    y_offset = 0
+    for img in images:
+        x_offset = (max_width - img.width) // 2
+        new_img.paste(img, (x_offset, y_offset))
+        y_offset += img.height
+
+    # Create output directory if needed
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        save_path = os.path.join(output_dir, f"{output_name}.png")
+    else:
+        save_path = f"{output_name}.png"
+
+    new_img.save(save_path, quality=95)
+
+    return save_path

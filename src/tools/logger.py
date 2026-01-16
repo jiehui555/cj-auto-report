@@ -1,27 +1,17 @@
 import logging
 import os
-from datetime import datetime
 from typing import Optional
 
+from src.tools import now
 
-def get_logger(
+
+def new_logger(
     name: str,
     log_dir: Optional[str] = None,
     log_file: Optional[str] = None,
     level: int = logging.INFO,
 ) -> logging.Logger:
-    """
-    获取配置好的logger实例
-
-    Args:
-        name: logger名称，通常使用 __name__
-        log_dir: 日志目录，如果为None则使用 tmp/logs/{日期}
-        log_file: 日志文件名，如果为None则使用 {name}.log
-        level: 日志级别，默认为 logging.INFO
-
-    Returns:
-        配置好的logger实例
-    """
+    """获取日志实例工具"""
     logger = logging.getLogger(name)
 
     # 避免重复添加handler
@@ -30,7 +20,6 @@ def get_logger(
 
     # 设置日志目录
     if log_dir is None:
-        from src import now
         log_date = now().strftime("%Y-%m-%d")
         log_dir = f"tmp/logs/{log_date}"
 
@@ -47,12 +36,12 @@ def get_logger(
 
     # 创建文件处理器
     file_handler = logging.FileHandler(log_path, encoding="utf-8")
-    file_handler.setFormatter(
-        logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
+
+    # 设置日志格式
+    fmt = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
     )
+    file_handler.setFormatter(logging.Formatter(fmt, datefmt="%Y-%m-%d %H:%M:%S"))
 
     # 添加处理器并设置级别
     logger.addHandler(file_handler)
