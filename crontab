@@ -1,0 +1,1 @@
+30 8 * * * /venv/bin/python /app/main.py dev send-daily-report >> /var/log/cron.log 2>&1
